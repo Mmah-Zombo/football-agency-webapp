@@ -1,21 +1,28 @@
+"use client"
+
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { clubs } from "@/lib/data"
-import { Plus, MapPin, Trophy } from "lucide-react"
+import { getClubs } from "@/lib/clubs-store"
+import { Plus, MapPin, Trophy, Mail } from "lucide-react"
+import Link from "next/link"
 
 export default function ClubsPage() {
+  const clubs = getClubs()
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="pl-64">
         <PageHeader title="Clubs" description="Partner clubs and organizations">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Club
-          </Button>
+          <Link href="/clubs/add">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Club
+            </Button>
+          </Link>
         </PageHeader>
 
         <div className="p-6">
@@ -55,12 +62,20 @@ export default function ClubsPage() {
                   </div>
 
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                      View Details
-                    </Button>
-                    <Button size="sm" className="flex-1">
-                      Contact
-                    </Button>
+                    <Link href={`/clubs/${club.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full bg-transparent">
+                        View Details
+                      </Button>
+                    </Link>
+                    <a
+                      href={`mailto:${club.email || "contact@club.com"}?subject=Partnership%20Inquiry%20-%20Football%20Agent&body=Dear%20${encodeURIComponent(club.name)}%20Team,%0A%0AI%20am%20writing%20to%20discuss%20potential%20player%20opportunities.%0A%0ABest%20regards`}
+                      className="flex-1"
+                    >
+                      <Button size="sm" className="w-full gap-2">
+                        <Mail className="h-3 w-3" />
+                        Contact
+                      </Button>
+                    </a>
                   </div>
                 </CardContent>
               </Card>

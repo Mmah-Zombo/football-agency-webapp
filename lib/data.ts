@@ -20,6 +20,10 @@ export interface Club {
   playersManaged: number
   activeContracts: number
   logo: string
+  email?: string
+  phone?: string
+  website?: string
+  founded?: string
 }
 
 export interface Contract {
@@ -123,6 +127,10 @@ export const clubs: Club[] = [
     playersManaged: 3,
     activeContracts: 2,
     logo: "/manchester-football-club-logo-crest.jpg",
+    email: "contact@manchesterfc.com",
+    phone: "+44 161 868 8000",
+    website: "www.manchesterfc.com",
+    founded: "1878",
   },
   {
     id: 2,
@@ -132,6 +140,10 @@ export const clubs: Club[] = [
     playersManaged: 2,
     activeContracts: 2,
     logo: "/real-madrid-style-football-club-logo.jpg",
+    email: "contact@realmadridb.com",
+    phone: "+34 91 398 4300",
+    website: "www.realmadrid.com",
+    founded: "1902",
   },
   {
     id: 3,
@@ -141,6 +153,10 @@ export const clubs: Club[] = [
     playersManaged: 1,
     activeContracts: 1,
     logo: "/celtic-style-football-club-logo-green.jpg",
+    email: "info@celticunited.com",
+    phone: "+44 871 226 1888",
+    website: "www.celticunited.com",
+    founded: "1887",
   },
   {
     id: 4,
@@ -150,6 +166,10 @@ export const clubs: Club[] = [
     playersManaged: 2,
     activeContracts: 1,
     logo: "/paris-football-club-logo-blue-red.jpg",
+    email: "contact@parissaintfc.com",
+    phone: "+33 1 41 41 41 41",
+    website: "www.parissaintfc.com",
+    founded: "1970",
   },
   {
     id: 5,
@@ -159,6 +179,10 @@ export const clubs: Club[] = [
     playersManaged: 1,
     activeContracts: 1,
     logo: "/bayern-munich-style-football-club-logo.jpg",
+    email: "info@bayernmunichb.com",
+    phone: "+49 89 69931 0",
+    website: "www.fcbayern.com",
+    founded: "1900",
   },
   {
     id: 6,
@@ -168,6 +192,10 @@ export const clubs: Club[] = [
     playersManaged: 2,
     activeContracts: 2,
     logo: "/ac-milan-style-football-club-logo-red-black.jpg",
+    email: "contact@acmilano.com",
+    phone: "+39 02 62281",
+    website: "www.acmilan.com",
+    founded: "1899",
   },
 ]
 

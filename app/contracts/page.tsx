@@ -1,25 +1,34 @@
+"use client"
+
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { contracts } from "@/lib/data"
+import { getContracts } from "@/lib/contracts-store"
 import { Plus, FileText, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import Link from "next/link"
 
 export default function ContractsPage() {
+  const contracts = getContracts()
   const activeContracts = contracts.filter((c) => c.status === "Active")
   const expiringContracts = contracts.filter((c) => c.status === "Expiring Soon")
-  const totalValue = "€59M"
+  const totalValue = contracts.reduce((acc, c) => {
+    const value = Number.parseInt(c.fee.replace(/[€$£M]/g, "")) || 0
+    return acc + value
+  }, 0)
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="pl-64">
         <PageHeader title="Contracts" description="Manage player contracts and agreements">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Contract
-          </Button>
+          <Link href="/contracts/add">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Contract
+            </Button>
+          </Link>
         </PageHeader>
 
         <div className="p-6 space-y-6">
@@ -59,7 +68,7 @@ export default function ContractsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Contract Value</p>
-                    <p className="text-2xl font-bold text-card-foreground">{totalValue}</p>
+                    <p className="text-2xl font-bold text-card-foreground">€{totalValue}M</p>
                   </div>
                 </div>
               </CardContent>
@@ -123,12 +132,16 @@ export default function ContractsPage() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              Edit
-                            </Button>
+                            <Link href={`/contracts/${contract.id}`}>
+                              <Button variant="ghost" size="sm">
+                                View
+                              </Button>
+                            </Link>
+                            <Link href={`/contracts/${contract.id}/edit`}>
+                              <Button variant="ghost" size="sm">
+                                Edit
+                              </Button>
+                            </Link>
                           </div>
                         </td>
                       </tr>
