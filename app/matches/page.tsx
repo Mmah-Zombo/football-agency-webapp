@@ -1,24 +1,29 @@
+"use client"
+
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { matches } from "@/lib/data"
+import { getUpcomingMatches, getCompletedMatches } from "@/lib/matches-store"
 import { Plus, Calendar, MapPin, Users, Clock, CheckCircle } from "lucide-react"
+import Link from "next/link"
 
 export default function MatchesPage() {
-  const upcomingMatches = matches.filter((m) => m.status === "Upcoming")
-  const completedMatches = matches.filter((m) => m.status === "Completed")
+  const upcomingMatches = getUpcomingMatches()
+  const completedMatches = getCompletedMatches()
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="pl-64">
         <PageHeader title="Matches" description="Track matches involving your managed players">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Match
-          </Button>
+          <Link href="/matches/add">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Match
+            </Button>
+          </Link>
         </PageHeader>
 
         <div className="p-6 space-y-6">
@@ -62,9 +67,11 @@ export default function MatchesPage() {
                       </div>
                     </div>
 
-                    <Button variant="outline" className="w-full mt-4 bg-transparent">
-                      View Details
-                    </Button>
+                    <Link href={`/matches/${match.id}`}>
+                      <Button variant="outline" className="w-full mt-4 bg-transparent">
+                        View Details
+                      </Button>
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -110,9 +117,11 @@ export default function MatchesPage() {
                         </td>
                         <td className="py-4 px-4 text-primary">{match.managedPlayers.join(", ")}</td>
                         <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            View Report
-                          </Button>
+                          <Link href={`/matches/${match.id}/report`}>
+                            <Button variant="ghost" size="sm">
+                              View Report
+                            </Button>
+                          </Link>
                         </td>
                       </tr>
                     ))}
