@@ -1,14 +1,28 @@
+"use client"
+
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { dashboardStats, players, contracts, matches } from "@/lib/data"
+import { getPlayers } from "@/lib/players-store"
+import { getContracts } from "@/lib/contracts-store"
+import { getMatches } from "@/lib/matches-store"
+import { getClubs } from "@/lib/clubs-store"
 import { Users, FileText, Calendar, Building2, TrendingUp, AlertTriangle } from "lucide-react"
 
 export default function DashboardPage() {
+  const players = getPlayers()
+  const contracts = getContracts()
+  const matches = getMatches()
+  const clubs = getClubs()
+
+  const activeContracts = contracts.filter((c) => c.status === "Active")
+  const expiringContracts = contracts.filter((c) => c.status === "Expiring Soon")
+  const upcomingMatches = matches.filter((m) => m.status === "Upcoming")
+
   const recentContracts = contracts.slice(0, 3)
-  const upcomingMatches = matches.filter((m) => m.status === "Upcoming").slice(0, 3)
+  const upcomingMatchesList = upcomingMatches.slice(0, 3)
   const topPlayers = players.slice(0, 4)
 
   return (
@@ -20,24 +34,18 @@ export default function DashboardPage() {
         <div className="p-6 space-y-6">
           {/* Stats Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Total Players"
-              value={dashboardStats.totalPlayers}
-              icon={Users}
-              trend="+2 this month"
-              trendUp={true}
-            />
+            <StatCard title="Total Players" value={players.length} icon={Users} trend="+2 this month" trendUp={true} />
             <StatCard
               title="Active Contracts"
-              value={dashboardStats.activeContracts}
+              value={activeContracts.length}
               icon={FileText}
-              trend={`${dashboardStats.expiringContracts} expiring soon`}
+              trend={`${expiringContracts.length} expiring soon`}
               trendUp={false}
             />
-            <StatCard title="Upcoming Matches" value={dashboardStats.upcomingMatches} icon={Calendar} />
+            <StatCard title="Upcoming Matches" value={upcomingMatches.length} icon={Calendar} />
             <StatCard
               title="Partner Clubs"
-              value={dashboardStats.totalClubs}
+              value={clubs.length}
               icon={Building2}
               trend="Total contract value: €59M"
               trendUp={true}
@@ -100,7 +108,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {upcomingMatches.map((match) => (
+                  {upcomingMatchesList.map((match) => (
                     <div key={match.id} className="rounded-lg border border-border p-4">
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="outline">{match.date}</Badge>

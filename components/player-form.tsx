@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Player } from "@/lib/data"
 import { addPlayer, updatePlayer } from "@/lib/players-store"
+import { Upload, X } from "lucide-react"
 
 interface PlayerFormProps {
   player?: Player
@@ -20,6 +21,8 @@ interface PlayerFormProps {
 export function PlayerForm({ player, mode }: PlayerFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imagePreview, setImagePreview] = useState<string>(player?.image || "")
 
   const [formData, setFormData] = useState({
     name: player?.name || "",
@@ -31,6 +34,39 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
     status: player?.status || ("Available" as Player["status"]),
     image: player?.image || "",
   })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5MB")
+        return
+      }
+
+      // Check file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please upload an image file")
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setImagePreview(base64String)
+        setFormData({ ...formData, image: base64String })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const clearImage = () => {
+    setImagePreview("")
+    setFormData({ ...formData, image: "" })
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,6 +103,42 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Player Photo</Label>
+            <div className="flex items-start gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview || "/placeholder.svg"}
+                    alt="Player preview"
+                    className="h-32 w-32 rounded-lg object-cover border-2 border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-32 w-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">Upload a player photo (Max 5MB, JPG, PNG, or GIF)</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -162,16 +234,6 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="image">Image URL (optional)</Label>
-              <Input
-                id="image"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="Enter image URL"
-              />
             </div>
           </div>
 

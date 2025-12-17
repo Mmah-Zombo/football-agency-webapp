@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Club } from "@/lib/data"
 import { addClub, updateClub } from "@/lib/clubs-store"
+import { Upload, X } from "lucide-react"
 
 interface ClubFormProps {
   club?: Club
@@ -18,6 +19,8 @@ interface ClubFormProps {
 export function ClubForm({ club, mode }: ClubFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imagePreview, setImagePreview] = useState<string>(club?.logo || "")
 
   const [formData, setFormData] = useState({
     name: club?.name || "",
@@ -31,6 +34,37 @@ export function ClubForm({ club, mode }: ClubFormProps) {
     website: club?.website || "",
     founded: club?.founded || "",
   })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5MB")
+        return
+      }
+
+      if (!file.type.startsWith("image/")) {
+        alert("Please upload an image file")
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setImagePreview(base64String)
+        setFormData({ ...formData, logo: base64String })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const clearImage = () => {
+    setImagePreview("")
+    setFormData({ ...formData, logo: "" })
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,6 +111,42 @@ export function ClubForm({ club, mode }: ClubFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Club Logo</Label>
+            <div className="flex items-start gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview || "/placeholder.svg"}
+                    alt="Club logo preview"
+                    className="h-32 w-32 rounded-lg object-cover border-2 border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-32 w-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">Upload a club logo (Max 5MB, JPG, PNG, or GIF)</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Club Name</Label>
@@ -156,16 +226,6 @@ export function ClubForm({ club, mode }: ClubFormProps) {
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                 placeholder="www.club.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="logo">Logo URL (optional)</Label>
-              <Input
-                id="logo"
-                value={formData.logo}
-                onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                placeholder="Enter logo URL"
               />
             </div>
           </div>
