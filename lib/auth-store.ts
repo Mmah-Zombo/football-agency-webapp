@@ -31,7 +31,7 @@ interface AuthState {
   register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
-  loadUser: () => void; // <-- added
+  loadUser: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -81,8 +81,22 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        document.cookie = 'auth_token=; Max-Age=0; path=/';
+      logout: async () => {
+        // 1. Call server-side logout endpoint to invalidate the HttpOnly cookie
+        try {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include', // Important: sends cookies
+          });
+        } catch (error) {
+          console.error('Logout API call failed:', error);
+          // Continue with client-side cleanup even if API fails
+        }
+
+        // 2. Clear persisted Zustand state
+        localStorage.removeItem('auth-storage');
+
+        // 3. Reset store state
         set({ user: null, isAuthenticated: false });
       },
 
@@ -93,21 +107,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadUser: () => {
-        // Try to restore user from persisted state (via persist middleware)
-        // If no persisted user, attempt to validate current token
         const state = get();
         if (state.user) {
           set({ isAuthenticated: true });
-          return;
         }
-
-        // Optional: validate token server-side if needed
-        // For demo/mock purposes we just leave it as not authenticated
       },
     }),
     {
-      name: 'auth-storage', // key in localStorage
-      partialize: (state) => ({ user: state.user }), // only persist user object
+      name: 'auth-storage',
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );
