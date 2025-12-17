@@ -1,30 +1,50 @@
 // middleware.ts
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 
-const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET!
+)
 
-const protectedRoutes = ['/dashboard', '/players', '/contracts', '/clubs', '/matches', '/profile'];
+const protectedRoutes = [
+  '/dashboard',
+  '/players',
+  '/contracts',
+  '/clubs',
+  '/matches',
+  '/profile',
+]
 
-export function middleware(req: NextRequest) {
-  const token = req.cookies.get('auth_token')?.value;
+export async function middleware(req: NextRequest) {
+  const token = req.cookies.get('auth_token')?.value
+  const pathname = req.nextUrl.pathname
 
-  if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
     if (!token) {
-      return NextResponse.redirect(new URL('/login', req.url));
+      return NextResponse.redirect(new URL('/login', req.url))
     }
 
     try {
-      jwt.verify(token, SECRET_KEY);
-      return NextResponse.next();
-    } catch (error) {
-      return NextResponse.redirect(new URL('/login', req.url));
+      await jwtVerify(token, secret, {
+        algorithms: ['HS256'],
+      })
+
+      return NextResponse.next()
+    } catch {
+      return NextResponse.redirect(new URL('/login', req.url))
     }
   }
 
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/players/:path*', '/contracts/:path*', '/clubs/:path*', '/matches/:path*', '/profile/:path*'],
-};
+  matcher: [
+    '/dashboard/:path*',
+    '/players/:path*',
+    '/contracts/:path*',
+    '/clubs/:path*',
+    '/matches/:path*',
+    '/profile/:path*',
+  ],
+}

@@ -10,9 +10,9 @@ export const roleLabels: Record<UserRole, string> = {
 };
 
 export const roleDescriptions: Record<UserRole, string> = {
-  agent: "Manage players, negotiate contracts, and handle career development.",
+  agent: "Manage players, negotiate contracts, and provide reports on potential signings.",
   scout: "Discover new talents and provide reports on potential signings.",
-  club: "Manage club operations, player acquisitions, and team strategy."
+  club: "Manage club operations, player acquisitions, and provide team strategy."
 };
 
 interface User {
@@ -45,9 +45,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (response.ok) {
-        // Fetch user data or decode from token if needed
-        // For simplicity, set dummy user; in real, add /api/auth/me to get user
-        set({ isAuthenticated: true, user: { id: 1, name: 'User', email, role } });
+        const data = await response.json();
+        set({ isAuthenticated: true, user: data.user });
         return true;
       }
       return false;
@@ -66,7 +65,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (response.ok) {
-        set({ isAuthenticated: true, user: { id: 1, name, email, role } });
+        const data = await response.json();
+        set({ isAuthenticated: true, user: { id: data.user?.id || 1, name, email, role } });
         return true;
       }
       return false;

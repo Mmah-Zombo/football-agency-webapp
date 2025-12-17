@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose';
 import path from 'path';
 import { promises as fs } from 'fs';
 
@@ -71,9 +71,14 @@ export async function POST(req: NextRequest) {
     await workbook.xlsx.writeFile(EXCEL_FILE);
 
     // Generate JWT
-    const token = jwt.sign({ id, email, role }, SECRET_KEY, { expiresIn: '1d' });
+    const secret = new TextEncoder().encode(SECRET_KEY);
+    const token = await new SignJWT({ id, email, role })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1d')
+      .sign(secret);
 
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, user: { id, name, email, role } });
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
