@@ -1,88 +1,90 @@
-"use client"
+// lib/auth-store.ts
+import { create } from 'zustand';
 
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
+export type UserRole = "agent" | "scout" | "club";
 
-export type UserRole = "agent" | "scout" | "admin" | "club_manager"
+export const roleLabels: Record<UserRole, string> = {
+  agent: "Agent",
+  scout: "Scout",
+  club: "Club Manager"
+};
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-  avatar?: string
+export const roleDescriptions: Record<UserRole, string> = {
+  agent: "Manage players, negotiate contracts, and handle career development.",
+  scout: "Discover new talents and provide reports on potential signings.",
+  club: "Manage club operations, player acquisitions, and team strategy."
+};
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar?: string;
 }
 
 interface AuthState {
-  user: User | null
-  isAuthenticated: boolean
-  login: (email: string, password: string, role: UserRole) => Promise<boolean>
-  register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>
-  logout: () => void
-  updateProfile: (updates: Partial<Omit<User, "id">>) => void
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string, role: UserRole) => Promise<boolean>;
+  register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
+  logout: () => void;
+  updateProfile: (data: Partial<User>) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      login: async (email: string, password: string, role: UserRole) => {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isAuthenticated: false,
 
-        // Mock successful login
-        const user: User = {
-          id: crypto.randomUUID(),
-          name: email.split("@")[0],
-          email,
-          role,
-          avatar: "/professional-avatar.png",
-        }
+  login: async (email, password, role) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role }),
+      });
 
-        set({ user, isAuthenticated: true })
-        return true
-      },
-      register: async (name: string, email: string, password: string, role: UserRole) => {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (response.ok) {
+        // Fetch user data or decode from token if needed
+        // For simplicity, set dummy user; in real, add /api/auth/me to get user
+        set({ isAuthenticated: true, user: { id: 1, name: 'User', email, role } });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  },
 
-        const user: User = {
-          id: crypto.randomUUID(),
-          name,
-          email,
-          role,
-          avatar: "/professional-avatar.png",
-        }
+  register: async (name, email, password, role) => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role }),
+      });
 
-        set({ user, isAuthenticated: true })
-        return true
-      },
-      logout: () => {
-        set({ user: null, isAuthenticated: false })
-      },
-      updateProfile: (updates) => {
-        set((state) => ({
-          user: state.user ? { ...state.user, ...updates } : null,
-        }))
-      },
-    }),
-    {
-      name: "auth-storage",
-    },
-  ),
-)
+      if (response.ok) {
+        set({ isAuthenticated: true, user: { id: 1, name, email, role } });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  },
 
-export const roleLabels: Record<UserRole, string> = {
-  agent: "Football Agent",
-  scout: "Scout",
-  admin: "Administrator",
-  club_manager: "Club Manager",
-}
+  logout: () => {
+    document.cookie = 'auth_token=; Max-Age=0; path=/';
+    set({ user: null, isAuthenticated: false });
+  },
 
-export const roleDescriptions: Record<UserRole, string> = {
-  agent: "Manage players, negotiate contracts, and build relationships with clubs",
-  scout: "Discover talent, create reports, and recommend players",
-  admin: "Full system access with user and data management capabilities",
-  club_manager: "Manage club operations, review player profiles, and handle contracts",
-}
+  updateProfile: (data) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, ...data } : null,
+    }));
+    // Optionally, update in Excel via API
+  },
+}));
