@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, Users, Building2, FileText, Calendar, LogOut, UserIcon } from "lucide-react"
 import { useAuthStore, roleLabels } from "@/lib/auth-store"
@@ -18,7 +19,12 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, isAuthenticated, logout } = useAuthStore()
+  const { user, isAuthenticated, logout, loadUser } = useAuthStore()
+
+  useEffect(() => {
+    loadUser()
+    console.log(user)
+  }, [loadUser])
 
   const handleLogout = () => {
     logout()
