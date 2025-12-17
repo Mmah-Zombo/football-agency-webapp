@@ -1,30 +1,28 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { PlayersList } from "@/components/players-list"
-import { getPlayers } from "@/lib/players-store"
+import { usePlayers } from "@/lib/players-store"  // ← uses the safe hook
 import { Plus } from "lucide-react"
-import type { Player } from "@/lib/data"
+import { getPlayers, getPlayerById, type Player } from '@/lib/players'
+import { useEffect, useState } from "react"
 
 export default function PlayersPage() {
-  const [players, setPlayers] = useState<Player[]>([])
-
+ const [players, setPlayers] = useState<Player[]>([])
   useEffect(() => {
-    // Load players on mount
-    setPlayers(getPlayers())
-
-    // Set up polling to check for new players every second
-    const interval = setInterval(() => {
-      setPlayers(getPlayers())
-    }, 1000)
-
-    return () => clearInterval(interval)
+    let mounted = true
+    ;(async () => {
+      const dbplayers = await getPlayers()
+      if (!mounted) return
+      setPlayers(dbplayers ?? [])
+    })()
+    return () => {
+      mounted = false
+    }
   }, [])
-
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />

@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import type { Match } from "@/lib/data"
-import { getPlayers } from "@/lib/players-store"
+import { getPlayers, getPlayerById, type Player } from '@/lib/players'
 
 interface MatchFormProps {
   match?: Match
@@ -20,9 +20,9 @@ interface MatchFormProps {
   title: string
 }
 
-export function MatchForm({ match, onSubmit, title }: MatchFormProps) {
+export async function MatchForm({ match, onSubmit, title }: MatchFormProps) {
   const router = useRouter()
-  const players = getPlayers()
+  const players = await getPlayers()
 
   const [formData, setFormData] = useState({
     date: match?.date || "",

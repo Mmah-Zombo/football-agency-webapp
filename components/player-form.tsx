@@ -9,9 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Player } from "@/lib/data"
-import { addPlayer, updatePlayer } from "@/lib/players-store"
 import { Upload, X } from "lucide-react"
+import {
+  addPlayerAction,
+  updatePlayerAction,
+  savePlayerImageAction,
+} from "@/lib/server/players-excel.server"
+import type { Player } from "@/lib/players" // Use the safe client export
 
 interface PlayerFormProps {
   player?: Player
@@ -21,80 +25,79 @@ interface PlayerFormProps {
 export function PlayerForm({ player, mode }: PlayerFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    player?.image ? `/uploads/players/${player.image}` : null
+  )
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [imagePreview, setImagePreview] = useState<string>(player?.image || "")
 
-  const [formData, setFormData] = useState({
-    name: player?.name || "",
-    age: player?.age?.toString() || "",
-    position: player?.position || "",
-    nationality: player?.nationality || "",
-    currentClub: player?.currentClub || "",
-    marketValue: player?.marketValue || "",
-    status: player?.status || ("Available" as Player["status"]),
-    image: player?.image || "",
-  })
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      // Check file size (limit to 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB")
-        return
-      }
+    if (!file) return
 
-      // Check file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please upload an image file")
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        setImagePreview(base64String)
-        setFormData({ ...formData, image: base64String })
-      }
-      reader.readAsDataURL(file)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB")
+      return
     }
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload a valid image file")
+      return
+    }
+
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
   }
 
   const clearImage = () => {
-    setImagePreview("")
-    setFormData({ ...formData, image: "" })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
 
-    const playerData = {
-      name: formData.name,
-      age: Number.parseInt(formData.age),
-      position: formData.position,
-      nationality: formData.nationality,
-      currentClub: formData.currentClub,
-      marketValue: formData.marketValue,
-      status: formData.status as Player["status"],
-      image: formData.image || "/diverse-football-player.png",
-    }
+    try {
+      let imageFilename = player?.image || ""
 
-    if (mode === "add") {
-      addPlayer(playerData)
-    } else if (player) {
-      updatePlayer(player.id, playerData)
-    }
+      // Upload image if selected
+      const uploadedFile = formData.get("image") as File
+      if (uploadedFile && uploadedFile.size > 0) {
+        const uploadedPath = await savePlayerImageAction(uploadedFile)
+        imageFilename = uploadedPath.split("/").pop()! // extract filename only
+      }
 
-    router.push("/players")
-    router.refresh()
+      // Build player data from form
+      const playerData = {
+        name: formData.get("name") as string,
+        position: formData.get("position") as string,
+        nationality: formData.get("nationality") as string,
+        age: Number.parseInt(formData.get("age") as string),
+        currentClub: formData.get("currentClub") as string,
+        marketValue: formData.get("marketValue") as string,
+        status: formData.get("status") as string,
+        representedSince: "", // You can add this field later if needed
+      }
+
+      if (mode === "add") {
+        await addPlayerAction(playerData, imageFilename)
+      } else if (player) {
+        await updatePlayerAction(player.id, playerData, imageFilename)
+      }
+
+      router.push("/players")
+      router.refresh()
+    } catch (error) {
+      console.error("Error saving player:", error)
+      alert("Failed to save player. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const positions = ["Forward", "Midfielder", "Defender", "Goalkeeper"]
-  const statuses: Player["status"][] = ["Available", "Under Contract", "Injured"]
+  const statuses = ["Available", "Under Contract", "Injured"] as const
 
   return (
     <Card className="max-w-2xl">
@@ -102,21 +105,22 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
         <CardTitle>{mode === "add" ? "Add New Player" : "Edit Player"}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form action={handleSubmit} className="space-y-6">
+          {/* Image Upload Section */}
           <div className="space-y-2">
             <Label>Player Photo</Label>
             <div className="flex items-start gap-4">
               {imagePreview ? (
                 <div className="relative">
                   <img
-                    src={imagePreview || "/placeholder.svg"}
+                    src={imagePreview}
                     alt="Player preview"
                     className="h-32 w-32 rounded-lg object-cover border-2 border-border"
                   />
                   <button
                     type="button"
                     onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90 transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -126,26 +130,30 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
                   <Upload className="h-8 w-8 text-muted-foreground" />
                 </div>
               )}
+
               <div className="flex-1 space-y-2">
                 <Input
                   ref={fileInputRef}
                   type="file"
+                  name="image"
                   accept="image/*"
-                  onChange={handleFileChange}
-                  className="cursor-pointer"
+                  onChange={handleImageChange}
                 />
-                <p className="text-xs text-muted-foreground">Upload a player photo (Max 5MB, JPG, PNG, or GIF)</p>
+                <p className="text-xs text-muted-foreground">
+                  Upload a player photo (Max 5MB, JPG, PNG, or GIF)
+                </p>
               </div>
             </div>
           </div>
 
+          {/* Form Fields */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                name="name"
+                defaultValue={player?.name}
                 placeholder="Enter player name"
                 required
               />
@@ -155,11 +163,11 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
               <Label htmlFor="age">Age</Label>
               <Input
                 id="age"
+                name="age"
                 type="number"
                 min="16"
                 max="45"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                defaultValue={player?.age}
                 placeholder="Enter age"
                 required
               />
@@ -167,10 +175,7 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="position">Position</Label>
-              <Select
-                value={formData.position}
-                onValueChange={(value) => setFormData({ ...formData, position: value })}
-              >
+              <Select name="position" defaultValue={player?.position}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select position" />
                 </SelectTrigger>
@@ -188,8 +193,8 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
               <Label htmlFor="nationality">Nationality</Label>
               <Input
                 id="nationality"
-                value={formData.nationality}
-                onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                name="nationality"
+                defaultValue={player?.nationality}
                 placeholder="Enter nationality"
                 required
               />
@@ -199,8 +204,8 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
               <Label htmlFor="currentClub">Current Club</Label>
               <Input
                 id="currentClub"
-                value={formData.currentClub}
-                onChange={(e) => setFormData({ ...formData, currentClub: e.target.value })}
+                name="currentClub"
+                defaultValue={player?.currentClub}
                 placeholder="Enter current club"
                 required
               />
@@ -210,8 +215,8 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
               <Label htmlFor="marketValue">Market Value</Label>
               <Input
                 id="marketValue"
-                value={formData.marketValue}
-                onChange={(e) => setFormData({ ...formData, marketValue: e.target.value })}
+                name="marketValue"
+                defaultValue={player?.marketValue}
                 placeholder="e.g., €25M"
                 required
               />
@@ -219,10 +224,7 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value as Player["status"] })}
-              >
+              <Select name="status" defaultValue={player?.status}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -237,6 +239,7 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex gap-4 pt-4">
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : mode === "add" ? "Add Player" : "Save Changes"}

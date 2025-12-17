@@ -1,18 +1,16 @@
-"use client"
-
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getPlayers } from "@/lib/players-store"
+import { getPlayers, getPlayerById, type Player } from '@/lib/players'
 import { getContracts } from "@/lib/contracts-store"
 import { getMatches } from "@/lib/matches-store"
 import { getClubs } from "@/lib/clubs-store"
 import { Users, FileText, Calendar, Building2, TrendingUp, AlertTriangle } from "lucide-react"
 
-export default function DashboardPage() {
-  const players = getPlayers()
+export default async function DashboardPage() {
+  const players = await getPlayers()
   const contracts = getContracts()
   const matches = getMatches()
   const clubs = getClubs()

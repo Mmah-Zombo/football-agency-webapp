@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Contract } from "@/lib/data"
 import { addContract, updateContract } from "@/lib/contracts-store"
-import { getPlayers } from "@/lib/players-store"
+import { getPlayers, getPlayerById, type Player } from '@/lib/players'
 import { getClubs } from "@/lib/clubs-store"
 
 interface ContractFormProps {
@@ -18,11 +18,11 @@ interface ContractFormProps {
   mode: "add" | "edit"
 }
 
-export function ContractForm({ contract, mode }: ContractFormProps) {
+export async function ContractForm({ contract, mode }: ContractFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const players = getPlayers()
+  const players = await getPlayers()
   const clubs = getClubs()
 
   const [formData, setFormData] = useState({

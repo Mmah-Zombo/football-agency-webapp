@@ -5,14 +5,17 @@ import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { players, contracts } from "@/lib/data"
+import { contracts } from "@/lib/data"
 import { ArrowLeft, Edit, Calendar, MapPin, Users, DollarSign } from "lucide-react"
+import { getPlayers, Player} from "@/lib/server/players-excel.server"
 
 interface PlayerDetailPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function PlayerDetailPage({ params }: PlayerDetailPageProps) {
+  const players = await getPlayers()
+
   const { id } = await params
   const player = players.find((p) => p.id === Number.parseInt(id))
 
@@ -50,7 +53,7 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <img
-                  src={player.image || "/placeholder.svg"}
+                  src={'/uploads/players/'+player.image || "/placeholder.svg"}
                   alt={player.name}
                   className="h-40 w-40 rounded-xl object-cover border-4 border-primary/20 bg-muted"
                 />

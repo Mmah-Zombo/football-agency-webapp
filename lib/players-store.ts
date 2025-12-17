@@ -1,37 +1,54 @@
+// lib/players-store.ts
 "use client"
 
-import { type Player, players as initialPlayers } from "./data"
+import { useEffect, useState } from "react"
+import type { Player } from "@/lib/data"
+// import { players as initialPlayers } from "@/lib/data"
 
-// Simple in-memory store for demo purposes
-let playersData = [...initialPlayers]
+// In-memory cache initialized with static data
+// let cachedPlayers: Player[] = [...initialPlayers]
 
-export function getPlayers(): Player[] {
-  return playersData
-}
+// Client-safe sync getter
+// export function getPlayers(): Player[] {
+//   return cachedPlayers
+// }
 
-export function getPlayerById(id: number): Player | undefined {
-  return playersData.find((p) => p.id === id)
-}
+// Reactive hook for components that need live updates (polling)
+export function usePlayers() {
+  const [players, setPlayers] = useState<Player[]>()
 
-export function addPlayer(player: Omit<Player, "id">): Player {
-  const newPlayer = {
-    ...player,
-    id: Math.max(...playersData.map((p) => p.id)) + 1,
-  }
-  playersData = [...playersData, newPlayer]
-  return newPlayer
-}
+  useEffect(() => {
+    // Only run in browser
+    if (typeof window === "undefined") return
 
-export function updatePlayer(id: number, updates: Partial<Player>): Player | undefined {
-  const index = playersData.findIndex((p) => p.id === id)
-  if (index === -1) return undefined
+    let isMounted = true
 
-  playersData[index] = { ...playersData[index], ...updates }
-  return playersData[index]
-}
+    const updatePlayers = async () => {
+      try {
+        // Import server action dynamically ONLY here (inside effect)
+        const { getPlayers: serverGetPlayers } = await import("@/lib/server/players-excel.server")
+        const freshPlayers = await serverGetPlayers()
 
-export function deletePlayer(id: number): boolean {
-  const initialLength = playersData.length
-  playersData = playersData.filter((p) => p.id !== id)
-  return playersData.length < initialLength
+        if (isMounted) {
+          setPlayers(freshPlayers)
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest players:", err)
+        // Keep using cached/static data on error
+      }
+    }
+
+    // Initial fetch
+    updatePlayers()
+
+    // Poll every second
+    const interval = setInterval(updatePlayers, 1000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [])
+
+  return players
 }

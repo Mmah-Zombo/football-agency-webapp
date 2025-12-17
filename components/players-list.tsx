@@ -51,13 +51,13 @@ export function PlayersList({ players }: PlayersListProps) {
 
       {/* Players Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredPlayers.map((player) => (
+        {Array.isArray(filteredPlayers) && filteredPlayers.map((player) => (
           <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-0">
               <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6">
                 <div className="flex items-start gap-4">
                   <img
-                    src={player.image || "/placeholder.svg"}
+                    src={'/uploads/players/'+player.image || "/placeholder.svg"}
                     alt={player.name}
                     className="h-20 w-20 rounded-full object-cover border-4 border-card bg-muted"
                   />

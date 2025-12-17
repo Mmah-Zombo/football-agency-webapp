@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getMatchById } from "@/lib/matches-store"
-import { getPlayers } from "@/lib/players-store"
+import { getPlayers, getPlayerById, type Player } from '@/lib/players'
 import {
   ArrowLeft,
   Calendar,
@@ -24,7 +24,7 @@ import {
   Download,
 } from "lucide-react"
 
-export default function MatchReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MatchReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const match = getMatchById(Number(id))
 
@@ -32,7 +32,7 @@ export default function MatchReportPage({ params }: { params: Promise<{ id: stri
     notFound()
   }
 
-  const players = getPlayers()
+  const players = await getPlayers()
   const involvedPlayers = players.filter((p) => match.managedPlayers.includes(p.name))
 
   // Parse result

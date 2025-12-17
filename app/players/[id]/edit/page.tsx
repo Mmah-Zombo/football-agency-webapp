@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { PlayerForm } from "@/components/player-form"
-import { players } from "@/lib/data"
+import { getPlayers, Player} from "@/lib/server/players-excel.server"
 import { ArrowLeft } from "lucide-react"
 
 interface EditPlayerPageProps {
@@ -12,6 +12,7 @@ interface EditPlayerPageProps {
 }
 
 export default async function EditPlayerPage({ params }: EditPlayerPageProps) {
+  const players = await getPlayers()
   const { id } = await params
   const player = players.find((p) => p.id === Number.parseInt(id))
 
