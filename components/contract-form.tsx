@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,11 +18,22 @@ interface ContractFormProps {
   mode: "add" | "edit"
 }
 
-export async function ContractForm({ contract, mode }: ContractFormProps) {
+export function ContractForm({ contract, mode }: ContractFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const players = await getPlayers()
+   const [players, setPlayers] = useState<Player[]>([])
+    useEffect(() => {
+      let mounted = true
+      ;(async () => {
+        const dbplayers = await getPlayers()
+        if (!mounted) return
+        setPlayers(dbplayers ?? [])
+      })()
+      return () => {
+        mounted = false
+      }
+    }, [])
   const clubs = getClubs()
 
   const [formData, setFormData] = useState({
