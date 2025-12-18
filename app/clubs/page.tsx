@@ -3,14 +3,26 @@
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getClubs } from "@/lib/clubs-store"
-import { Plus, MapPin, Trophy, Mail } from "lucide-react"
+import { Plus, Mail } from "lucide-react"
 import Link from "next/link"
+import { getClubs } from "@/lib/server/clubs-excel.server"
+import type { Club } from "@/lib/server/clubs-excel.server"
+import { useEffect, useState } from "react"
 
 export default function ClubsPage() {
-  const clubs = getClubs()
+ const [clubs, setClubs] = useState<Club[]>([])
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const dbClubs = await getClubs()
+      if (!mounted) return
+      setClubs(dbClubs ?? [])
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,25 +46,18 @@ export default function ClubsPage() {
                     <img
                       src={club.logo || "/placeholder.svg"}
                       alt={club.name}
-                      className="h-16 w-16 rounded-lg object-cover bg-muted"
+                      className="h-20 w-20 rounded-lg object-cover bg-muted"
                     />
-                    <div>
-                      <h3 className="font-bold text-lg text-card-foreground">{club.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {club.location}
-                      </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">{club.name}</h3>
+                      <p className="text-sm text-muted-foreground">{club.league}</p>
+                      <p className="text-sm text-muted-foreground">{club.location}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-4 w-4 text-primary" />
-                    <Badge variant="outline">{club.league}</Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-border">
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-primary">{club.playersManaged}</p>
+                      <p className="text-2xl font-bold text-card-foreground">{club.playersManaged}</p>
                       <p className="text-xs text-muted-foreground">Players Managed</p>
                     </div>
                     <div className="text-center">
@@ -61,14 +66,14 @@ export default function ClubsPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-2">
                     <Link href={`/clubs/${club.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full bg-transparent">
                         View Details
                       </Button>
                     </Link>
                     <a
-                      href={`mailto:${club.email || "contact@club.com"}?subject=Partnership%20Inquiry%20-%20Football%20Agent&body=Dear%20${encodeURIComponent(club.name)}%20Team,%0A%0AI%20am%20writing%20to%20discuss%20potential%20player%20opportunities.%0A%0ABest%20regards`}
+                      href={`mailto:${club.email}?subject=Partnership%20Inquiry&body=Dear%20${encodeURIComponent(club.name)}%20Team...`}
                       className="flex-1"
                     >
                       <Button size="sm" className="w-full gap-2">

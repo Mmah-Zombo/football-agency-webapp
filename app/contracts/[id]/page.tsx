@@ -1,14 +1,8 @@
-"use client"
-
-import { use } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getContractById } from "@/lib/contracts-store"
-import { getPlayerById } from "@/lib/players-store"
-import { getClubById } from "@/lib/clubs-store"
 import {
   ArrowLeft,
   Edit,
@@ -23,17 +17,32 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import {
+  getContracts,
+  getContractById,
+  getContractByPlayerId,
+  addContractAction,
+  updateContractAction,
+  Contract
+} from '@/lib/server/contracts-excel.server'
+import { getPlayerById, getPlayers, Player } from "@/lib/server/players-excel.server"
+import { getClubById } from "@/lib/server/clubs-excel.server"
 
-export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const contract = getContractById(Number.parseInt(resolvedParams.id))
+export default async function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const contracts = await getContracts()
+
+  const { id } = await params
+  const contract = contracts.find((p) => p.id === Number.parseInt(id))
 
   if (!contract) {
     notFound()
   }
 
-  const player = getPlayerById(contract.playerId)
-  const club = getClubById(contract.clubId)
+  const players = await getPlayers()
+
+  const player = await getPlayerById(contract.playerId)
+
+  const club = await getClubById(contract.clubId)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -162,7 +171,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 {player ? (
                   <div className="flex items-center gap-4">
                     <img
-                      src={player.image || "/placeholder.svg?height=80&width=80&query=football player"}
+                      src={'/uploads/players/'+player.image || "/placeholder.svg?height=80&width=80&query=football player"}
                       alt={player.name}
                       className="h-20 w-20 rounded-lg object-cover bg-muted"
                     />

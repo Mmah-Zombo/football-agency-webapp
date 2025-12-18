@@ -1,15 +1,14 @@
+// components/club-form.tsx
 "use client"
 
-import type React from "react"
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Club } from "@/lib/data"
-import { addClub, updateClub } from "@/lib/clubs-store"
-import { Upload, X } from "lucide-react"
+import { addClubAction, updateClubAction, saveClubLogoAction } from "@/lib/server/clubs-excel.server"
+import type { Club } from "@/lib/server/clubs-excel.server"
 
 interface ClubFormProps {
   club?: Club
@@ -19,90 +18,62 @@ interface ClubFormProps {
 export function ClubForm({ club, mode }: ClubFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [imagePreview, setImagePreview] = useState<string>(club?.logo || "")
+  const [logoPreview, setLogoPreview] = useState<string | null>(club?.logo || null)
 
   const [formData, setFormData] = useState({
     name: club?.name || "",
     location: club?.location || "",
     league: club?.league || "",
-    playersManaged: club?.playersManaged?.toString() || "0",
-    activeContracts: club?.activeContracts?.toString() || "0",
-    logo: club?.logo || "",
     email: club?.email || "",
     phone: club?.phone || "",
     website: club?.website || "",
-    founded: club?.founded || "",
+    playersManaged: club?.playersManaged?.toString() || "0",
+    activeContracts: club?.activeContracts?.toString() || "0",
+    logo: club?.logo || ""
   })
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB")
-        return
-      }
+    if (!file) return
 
-      if (!file.type.startsWith("image/")) {
-        alert("Please upload an image file")
-        return
-      }
+    const previewUrl = URL.createObjectURL(file)
+    setLogoPreview(previewUrl)
 
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        setImagePreview(base64String)
-        setFormData({ ...formData, logo: base64String })
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const clearImage = () => {
-    setImagePreview("")
-    setFormData({ ...formData, logo: "" })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    // Upload and get permanent path
+    const uploadedPath = await saveClubLogoAction(file)
+    setFormData(prev => ({ ...prev, logo: uploadedPath }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    const clubData = {
+    const data = {
       name: formData.name,
       location: formData.location,
       league: formData.league,
-      playersManaged: Number.parseInt(formData.playersManaged),
-      activeContracts: Number.parseInt(formData.activeContracts),
-      logo: formData.logo || "/generic-football-club-logo.png",
       email: formData.email,
       phone: formData.phone,
       website: formData.website,
-      founded: formData.founded,
+      playersManaged: Number(formData.playersManaged),
+      activeContracts: Number(formData.activeContracts),
     }
 
-    if (mode === "add") {
-      addClub(clubData)
-    } else if (club) {
-      updateClub(club.id, clubData)
+    try {
+      if (mode === "add") {
+        await addClubAction(data, formData.logo || "")
+      } else if (club) {
+        await updateClubAction(club.id, data, formData.logo)
+      }
+      router.push("/clubs")
+      router.refresh()
+    } catch (err) {
+      console.error(err)
+      alert("Failed to save club")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    router.push("/clubs")
-    router.refresh()
   }
-
-  const leagues = [
-    "Premier League",
-    "La Liga",
-    "Bundesliga",
-    "Serie A",
-    "Ligue 1",
-    "Scottish Premiership",
-    "Eredivisie",
-    "Primeira Liga",
-  ]
 
   return (
     <Card className="max-w-2xl">
@@ -111,126 +82,82 @@ export function ClubForm({ club, mode }: ClubFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label>Club Logo</Label>
-            <div className="flex items-start gap-4">
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview || "/placeholder.svg"}
-                    alt="Club logo preview"
-                    className="h-32 w-32 rounded-lg object-cover border-2 border-border"
-                  />
-                  <button
-                    type="button"
-                    onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="h-32 w-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 space-y-2">
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-muted-foreground">Upload a club logo (Max 5MB, JPG, PNG, or GIF)</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Club Name</Label>
+              <Label>Club Name</Label>
               <Input
-                id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter club name"
+                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label>Location</Label>
               <Input
-                id="location"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="City, Country"
+                onChange={e => setFormData(prev => ({ ...prev, location: e.target.value }))}
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="league">League</Label>
+              <Label>League</Label>
               <Input
-                id="league"
                 value={formData.league}
-                onChange={(e) => setFormData({ ...formData, league: e.target.value })}
-                placeholder="Enter league name"
-                list="leagues"
+                onChange={e => setFormData(prev => ({ ...prev, league: e.target.value }))}
                 required
               />
-              <datalist id="leagues">
-                {leagues.map((league) => (
-                  <option key={league} value={league} />
-                ))}
-              </datalist>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="founded">Founded Year</Label>
+              <Label>Email</Label>
               <Input
-                id="founded"
-                value={formData.founded}
-                onChange={(e) => setFormData({ ...formData, founded: e.target.value })}
-                placeholder="e.g., 1899"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="contact@club.com"
-                required
+                onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label>Phone</Label>
               <Input
-                id="phone"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+44 123 456 7890"
+                onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
+              <Label>Website</Label>
               <Input
-                id="website"
                 value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                placeholder="www.club.com"
+                onChange={e => setFormData(prev => ({ ...prev, website: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Players Managed</Label>
+              <Input
+                type="number"
+                value={formData.playersManaged}
+                onChange={e => setFormData(prev => ({ ...prev, playersManaged: e.target.value }))}
+                min="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Active Contracts</Label>
+              <Input
+                type="number"
+                value={formData.activeContracts}
+                onChange={e => setFormData(prev => ({ ...prev, activeContracts: e.target.value }))}
+                min="0"
               />
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="space-y-2">
+            <Label>Club Logo</Label>
+            {logoPreview && (
+              <img src={logoPreview} alt="Preview" className="h-32 w-32 object-cover rounded-lg mb-4" />
+            )}
+            <Input type="file" accept="image/*" onChange={handleLogoChange} />
+          </div>
+
+          <div className="flex gap-4 pt-6">
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : mode === "add" ? "Add Club" : "Save Changes"}
             </Button>

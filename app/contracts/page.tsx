@@ -5,15 +5,35 @@ import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getContracts } from "@/lib/contracts-store"
 import { Plus, FileText, Clock, CheckCircle, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import {
+  getContracts,
+  getContractById,
+  getContractByPlayerId,
+  addContractAction,
+  updateContractAction,
+  Contract
+} from '@/lib/server/contracts-excel.server'
+import { useEffect, useState } from "react"
 
 export default function ContractsPage() {
-  const contracts = getContracts()
-  const activeContracts = contracts.filter((c) => c.status === "Active")
-  const expiringContracts = contracts.filter((c) => c.status === "Expiring Soon")
-  const totalValue = contracts.reduce((acc, c) => {
+  // const contracts = await getContracts()
+  const [contracts, setContracts] = useState<Contract[]>([])
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const dbcontracts = await getContracts()
+      if (!mounted) return
+      setContracts(dbcontracts ?? [])
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+  const activeContracts = contracts.filter((c: any) => c.status === "Active")
+  const expiringContracts = contracts.filter((c: any) => c.status === "Expiring Soon")
+  const totalValue = contracts.reduce((acc: any, c: any) => {
     const value = Number.parseInt(c.fee.replace(/[€$£M]/g, "")) || 0
     return acc + value
   }, 0)

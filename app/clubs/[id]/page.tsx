@@ -1,26 +1,27 @@
-"use client"
-
 import { use } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getClubById } from "@/lib/clubs-store"
-import { getContracts } from "@/lib/contracts-store"
+import { getClubById, getClubs } from "@/lib/server/clubs-excel.server"
+import { getContracts } from "@/lib/server/contracts-excel.server" // if you migrated contracts too
 import { ArrowLeft, MapPin, Trophy, Mail, Phone, Globe, Calendar, Users, FileText, Edit } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-export default function ClubDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const club = getClubById(Number.parseInt(resolvedParams.id))
+export default async function ClubDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const clubs = await getClubs()
+
+  const { id } = await params
+  const club = clubs.find((p: any) => p.id === Number.parseInt(id))
 
   if (!club) {
     notFound()
   }
 
-  const contracts = getContracts().filter((c) => c.clubId === club.id)
+  const unfilteredContracts = await getContracts()
+  const contracts = unfilteredContracts.filter((c: any) => c.clubId === club.id)
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,12 +68,12 @@ export default function ClubDetailsPage({ params }: { params: Promise<{ id: stri
                       <Trophy className="h-3 w-3" />
                       {club.league}
                     </Badge>
-                    {club.founded && (
+                    {/* {club.founded && (
                       <Badge variant="secondary" className="gap-1">
                         <Calendar className="h-3 w-3" />
                         Founded {club.founded}
                       </Badge>
-                    )}
+                    )} */}
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
