@@ -6,3 +6,5 @@ yarn-error.log
 .env
 .env.local
 .env.development.local
+public/uploads/
+public/data/
