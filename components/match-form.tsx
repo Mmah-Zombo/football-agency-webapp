@@ -1,122 +1,189 @@
+// components/match-form.tsx
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Save } from "lucide-react"
-import Link from "next/link"
-import type { Match } from "@/lib/data"
-import { getPlayers, getPlayerById, type Player } from '@/lib/players'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+import { addMatchAction, updateMatchAction } from "@/lib/server/matches-excel.server"
+import type { Match } from "@/lib/server/matches-excel.server"
+
+import { getPlayers, type Player } from "@/lib/server/players-excel.server"
+import { getClubs, type Club } from "@/lib/server/clubs-excel.server"
 
 interface MatchFormProps {
   match?: Match
-  onSubmit: (data: Omit<Match, "id">) => void
-  title: string
+  mode: "add" | "edit"
 }
 
-export async function MatchForm({ match, onSubmit, title }: MatchFormProps) {
+export function MatchForm({ match, mode }: MatchFormProps) {
   const router = useRouter()
-  const players = await getPlayers()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [players, setPlayers] = useState<Player[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
+
+  useEffect(() => {
+    async function loadData() {
+      const [loadedPlayers, loadedClubs] = await Promise.all([
+        getPlayers(),
+        getClubs(),
+      ])
+      setPlayers(loadedPlayers)
+      setClubs(loadedClubs)
+    }
+    loadData()
+  }, [])
 
   const [formData, setFormData] = useState({
-    date: match?.date || "",
     homeTeam: match?.homeTeam || "",
     awayTeam: match?.awayTeam || "",
+    date: match?.date || "",
     venue: match?.venue || "",
+    status: match?.status || "Upcoming",
+    result: match?.result || "",
     managedPlayers: match?.managedPlayers || [],
-    result: match?.result || null,
-    status: match?.status || ("Upcoming" as Match["status"]),
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(formData)
-    router.push("/matches")
-  }
-
   const handlePlayerToggle = (playerName: string) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       managedPlayers: prev.managedPlayers.includes(playerName)
-        ? prev.managedPlayers.filter((p) => p !== playerName)
+        ? prev.managedPlayers.filter(p => p !== playerName)
         : [...prev.managedPlayers, playerName],
     }))
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isSubmitting) return
+
+    if (formData.homeTeam === formData.awayTeam) {
+      alert("Home team and away team cannot be the same club.")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const data: Omit<Match, "id"> = {
+      homeTeam: formData.homeTeam,
+      awayTeam: formData.awayTeam,
+      date: formData.date,
+      venue: formData.venue,
+      status: formData.status,
+      result: formData.status === "Completed" ? formData.result : undefined,
+      managedPlayers: formData.managedPlayers,
+    }
+
+    try {
+      if (mode === "add") {
+        await addMatchAction(data)
+      } else if (match) {
+        await updateMatchAction(match.id, data)
+      }
+
+      router.push("/matches")
+      router.refresh()
+    } catch (error) {
+      console.error("Failed to save match:", error)
+      alert("Failed to save match. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <Card>
+    <Card className="max-w-3xl">
       <CardHeader>
-        <div className="flex items-center gap-4">
-          <Link href="/matches">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <CardTitle>{title}</CardTitle>
-        </div>
+        <CardTitle>{mode === "add" ? "Add New Match" : "Edit Match"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="date">Match Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="venue">Venue</Label>
-              <Input
-                id="venue"
-                value={formData.venue}
-                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                placeholder="e.g., Old Trafford"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="homeTeam">Home Team</Label>
-              <Input
-                id="homeTeam"
-                value={formData.homeTeam}
-                onChange={(e) => setFormData({ ...formData, homeTeam: e.target.value })}
-                placeholder="e.g., Manchester FC"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="awayTeam">Away Team</Label>
-              <Input
-                id="awayTeam"
-                value={formData.awayTeam}
-                onChange={(e) => setFormData({ ...formData, awayTeam: e.target.value })}
-                placeholder="e.g., Liverpool FC"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label>Home Team</Label>
               <Select
-                value={formData.status}
-                onValueChange={(value: Match["status"]) => setFormData({ ...formData, status: value })}
+                value={formData.homeTeam}
+                onValueChange={value => setFormData(prev => ({ ...prev, homeTeam: value }))}
+                required
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select home team" />
                 </SelectTrigger>
+                <SelectContent>
+                  {clubs.map(club => (
+                    <SelectItem
+                      key={club.id}
+                      value={club.name}
+                      disabled={club.name === formData.awayTeam}
+                    >
+                      {club.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Away Team</Label>
+              <Select
+                value={formData.awayTeam}
+                onValueChange={value => setFormData(prev => ({ ...prev, awayTeam: value }))}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select away team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clubs.map(club => (
+                    <SelectItem
+                      key={club.id}
+                      value={club.name}
+                      disabled={club.name === formData.homeTeam}
+                    >
+                      {club.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Venue</Label>
+              <Input
+                value={formData.venue}
+                onChange={e => setFormData(prev => ({ ...prev, venue: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={value => setFormData(prev => ({ ...prev, status: value as Match["status"] }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Upcoming">Upcoming</SelectItem>
                   <SelectItem value="In Progress">In Progress</SelectItem>
@@ -127,52 +194,57 @@ export async function MatchForm({ match, onSubmit, title }: MatchFormProps) {
 
             {formData.status === "Completed" && (
               <div className="space-y-2">
-                <Label htmlFor="result">Result</Label>
+                <Label>Result (e.g. 2-1)</Label>
                 <Input
-                  id="result"
-                  value={formData.result || ""}
-                  onChange={(e) => setFormData({ ...formData, result: e.target.value || null })}
-                  placeholder="e.g., 2-1"
+                  value={formData.result}
+                  onChange={e => setFormData(prev => ({ ...prev, result: e.target.value }))}
+                  placeholder="2-1"
                 />
               </div>
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Managed Players Involved</Label>
-            <div className="grid gap-2 md:grid-cols-3">
-              {players.map((player) => (
-                <label
-                  key={player.id}
-                  className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    formData.managedPlayers.includes(player.name)
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:bg-muted"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.managedPlayers.includes(player.name)}
-                    onChange={() => handlePlayerToggle(player.name)}
-                    className="sr-only"
-                  />
-                  <span className="text-sm font-medium">{player.name}</span>
-                  <span className="text-xs text-muted-foreground">({player.currentClub})</span>
-                </label>
-              ))}
+          <div className="space-y-4">
+            <Label>Managed Players in this Match</Label>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {players.length === 0 ? (
+                <p className="text-sm text-muted-foreground col-span-full">Loading players...</p>
+              ) : (
+                players.map(player => (
+                  <label
+                    key={player.id}
+                    className="flex items-center gap-3 cursor-pointer rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.managedPlayers.includes(player.name)}
+                      onChange={() => handlePlayerToggle(player.name)}
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <p className="font-medium text-sm">{player.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {player.position} • {player.currentClub}
+                      </p>
+                    </div>
+                  </label>
+                ))
+              )}
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button type="submit" className="gap-2">
-              <Save className="h-4 w-4" />
-              {match ? "Update Match" : "Add Match"}
+          <div className="flex justify-end gap-4 pt-6">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : mode === "add" ? "Add Match" : "Save Changes"}
             </Button>
-            <Link href="/matches">
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </CardContent>

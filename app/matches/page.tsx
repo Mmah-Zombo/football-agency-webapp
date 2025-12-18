@@ -1,17 +1,27 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getUpcomingMatches, getCompletedMatches } from "@/lib/matches-store"
 import { Plus, Calendar, MapPin, Users, Clock, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { getUpcomingMatches, getCompletedMatches } from "@/lib/server/matches-excel.server"
+import type { Match } from "@/lib/server/matches-excel.server"
 
 export default function MatchesPage() {
-  const upcomingMatches = getUpcomingMatches()
-  const completedMatches = getCompletedMatches()
+  const [upcomingMatches, setUpcoming] = useState<Match[]>([])
+  const [completedMatches, setCompleted] = useState<Match[]>([])
+
+  useEffect(() => {
+    async function load() {
+      setUpcoming(await getUpcomingMatches())
+      setCompleted(await getCompletedMatches())
+    }
+    load()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">

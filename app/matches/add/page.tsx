@@ -1,23 +1,26 @@
-"use client"
-
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { MatchForm } from "@/components/match-form"
-import { addMatch } from "@/lib/matches-store"
-import type { Match } from "@/lib/data"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function AddMatchPage() {
-  const handleSubmit = (data: Omit<Match, "id">) => {
-    addMatch(data)
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="pl-64">
-        <PageHeader title="Add Match" description="Schedule a new match involving your managed players" />
+        <PageHeader title="Add Match" description="Schedule a new match involving your managed players">
+          <Link href="/matches">
+            <Button variant="outline" className="gap-2 bg-transparent">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Matches
+            </Button>
+          </Link>
+        </PageHeader>
+
         <div className="p-6">
-          <MatchForm onSubmit={handleSubmit} title="New Match Details" />
+          <MatchForm mode="add" />
         </div>
       </main>
     </div>

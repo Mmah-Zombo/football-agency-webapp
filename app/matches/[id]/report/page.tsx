@@ -1,6 +1,3 @@
-"use client"
-
-import { use } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Sidebar } from "@/components/sidebar"
@@ -23,10 +20,13 @@ import {
   FileText,
   Download,
 } from "lucide-react"
+import { getMatches } from "@/lib/server/matches-excel.server"
 
 export default async function MatchReportPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const match = getMatchById(Number(id))
+  const matches = await getMatches()
+  const { id } = await params
+  const match = matches.find((p) => p.id === Number.parseInt(id))
+
 
   if (!match || match.status !== "Completed") {
     notFound()
