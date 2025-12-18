@@ -1,19 +1,20 @@
+
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getPlayers, getPlayerById, type Player } from '@/lib/players'
-import { getContracts } from "@/lib/contracts-store"
-import { getMatches } from "@/lib/matches-store"
-import { getClubs } from "@/lib/clubs-store"
 import { Users, FileText, Calendar, Building2, TrendingUp, AlertTriangle } from "lucide-react"
+import { getContracts } from "@/lib/server/contracts-excel.server"
+import { getMatches } from "@/lib/server/matches-excel.server"
+import { getClubs } from "@/lib/server/clubs-excel.server"
 
 export default async function DashboardPage() {
   const players = await getPlayers()
-  const contracts = getContracts()
-  const matches = getMatches()
-  const clubs = getClubs()
+  const contracts = await getContracts()
+  const matches = await getMatches()
+  const clubs = await getClubs()
 
   const activeContracts = contracts.filter((c) => c.status === "Active")
   const expiringContracts = contracts.filter((c) => c.status === "Expiring Soon")
@@ -65,7 +66,7 @@ export default async function DashboardPage() {
                   {topPlayers.map((player) => (
                     <div key={player.id} className="flex items-center gap-4">
                       <img
-                        src={player.image || "/placeholder.svg"}
+                        src={'/uploads/players/'+player.image || "/placeholder.svg"}
                         alt={player.name}
                         className="h-12 w-12 rounded-full object-cover bg-muted"
                       />
