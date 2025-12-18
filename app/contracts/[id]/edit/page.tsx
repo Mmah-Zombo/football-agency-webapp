@@ -1,5 +1,3 @@
-"use client"
-
 import { use } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
@@ -9,11 +7,13 @@ import { getContractById } from "@/lib/contracts-store"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { getContracts } from "@/lib/server/contracts-excel.server"
 
-export default function EditContractPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const contract = getContractById(Number.parseInt(resolvedParams.id))
-
+export default async function EditContractPage({ params }: { params: Promise<{ id: string }> }) {
+    const contracts = await getContracts()
+    const { id } = await params
+    const contract = contracts.find((p) => p.id === Number.parseInt(id))
+  
   if (!contract) {
     notFound()
   }

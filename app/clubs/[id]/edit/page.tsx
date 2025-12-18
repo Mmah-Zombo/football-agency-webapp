@@ -1,18 +1,17 @@
-"use client"
-
 import { use } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { ClubForm } from "@/components/club-form"
 import { Button } from "@/components/ui/button"
-import { getClubById } from "@/lib/clubs-store"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { getClubs } from "@/lib/server/clubs-excel.server"
 
-export default function EditClubPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const club = getClubById(Number.parseInt(resolvedParams.id))
+export default async function EditClubPage({ params }: { params: Promise<{ id: string }> }) {
+  const clubs = await getClubs()
+  const { id } = await params
+  const club = clubs.find((p) => p.id === Number.parseInt(id))
 
   if (!club) {
     notFound()

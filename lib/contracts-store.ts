@@ -4,17 +4,17 @@ import { useEffect, useState } from "react"
 import type { Contract } from "@/lib/data"
 
 // Runtime import of the actual data (not type-only)
-import { contracts as initialContracts } from "@/lib/data"
+// import { contracts as initialContracts } from "@/lib/data"
 
 // Optional: server getter if you implement Excel import later
 // import { getContracts as serverGetContracts } from "@/lib/server/contracts-excel.server"
 
 // In-memory store initialized with real data
-let contractsData: Contract[] = [...initialContracts]
+let contractsData: Contract[] = []
 
 // Optional: Hook for reactive updates (used in ContractsPage, etc.)
 export function useContracts() {
-  const [contracts, setContracts] = useState<Contract[]>(contractsData)
+  const [contracts, setContracts] = useState<Contract[]>([])
 
   // Poll every second to reflect changes made elsewhere (add/edit/delete)
   useEffect(() => {
