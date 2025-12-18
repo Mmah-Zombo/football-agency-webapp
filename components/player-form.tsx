@@ -1,21 +1,29 @@
+// components/player-form.tsx
 "use client"
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Upload, X } from "lucide-react"
 import {
   addPlayerAction,
   updatePlayerAction,
   savePlayerImageAction,
 } from "@/lib/server/players-excel.server"
-import type { Player } from "@/lib/players" // Use the safe client export
+import type { Player } from "@/lib/players" // safe client export
+import { getClubs, type Club } from "@/lib/server/clubs-excel.server"
 
 interface PlayerFormProps {
   player?: Player
@@ -30,6 +38,23 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load clubs for the dropdown
+  const [clubs, setClubs] = useState<Club[]>([])
+  useEffect(() => {
+    let Mounted = true
+    ;(async () => {
+      try {
+        const loaded = await getClubs()
+        if (Mounted) setClubs(loaded ?? [])
+      } catch (err) {
+        console.error("Failed to load clubs:", err)
+      }
+    })()
+    return () => {
+      Mounted = false
+    }
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -77,7 +102,7 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
         currentClub: formData.get("currentClub") as string,
         marketValue: formData.get("marketValue") as string,
         status: formData.get("status") as string,
-        representedSince: "", // You can add this field later if needed
+        representedSince: "", // optional field
       }
 
       if (mode === "add") {
@@ -200,15 +225,35 @@ export function PlayerForm({ player, mode }: PlayerFormProps) {
               />
             </div>
 
+            {/* Current Club – now a Select populated with clubs */}
             <div className="space-y-2">
               <Label htmlFor="currentClub">Current Club</Label>
-              <Input
-                id="currentClub"
-                name="currentClub"
-                defaultValue={player?.currentClub}
-                placeholder="Enter current club"
-                required
-              />
+              {clubs.length > 0 ? (
+                <Select
+                  name="currentClub"
+                  defaultValue={player?.currentClub}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a club" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clubs.map((club) => (
+                      <SelectItem key={club.id} value={club.name}>
+                        {club.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                // Fallback to free-text if no clubs are loaded
+                <Input
+                  id="currentClub"
+                  name="currentClub"
+                  defaultValue={player?.currentClub}
+                  placeholder="Enter current club"
+                  required
+                />
+              )}
             </div>
 
             <div className="space-y-2">
