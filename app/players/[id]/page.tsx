@@ -5,9 +5,9 @@ import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { contracts } from "@/lib/data"
 import { ArrowLeft, Edit, Calendar, MapPin, Users, DollarSign } from "lucide-react"
 import { getPlayers, Player} from "@/lib/server/players-excel.server"
+import { getContractByPlayerId } from "@/lib/server/contracts-excel.server"
 
 interface PlayerDetailPageProps {
   params: Promise<{ id: string }>
@@ -18,13 +18,14 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
 
   const { id } = await params
   const player = players.find((p) => p.id === Number.parseInt(id))
+  // const contracts = await getContractByPlayerId(Number.parseInt(id))
 
   if (!player) {
     notFound()
   }
 
   // Find player's contract if any
-  const playerContract = contracts.find((c) => c.playerId === player.id)
+  const playerContract = await getContractByPlayerId(Number.parseInt(id))
 
   return (
     <div className="min-h-screen bg-background">
