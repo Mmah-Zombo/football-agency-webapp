@@ -1,3 +1,4 @@
+// components/contract-form.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -13,16 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
 import { getPlayers, type Player } from "@/lib/server/players-excel.server"
 import {
   addContractAction,
   updateContractAction,
-  getContractById,
 } from "@/lib/server/contracts-excel.server"
-
-// Use the same type from server
 import type { Contract } from "@/lib/server/contracts-excel.server"
-import { Club, getClubs } from "@/lib/server/clubs-excel.server"
+
+import { getClubs, updateClubAction } from "@/lib/server/clubs-excel.server"
+import type { Club } from "@/lib/server/clubs-excel.server"
 
 interface ContractFormProps {
   contract?: Contract
@@ -32,32 +33,30 @@ interface ContractFormProps {
 export function ContractForm({ contract, mode }: ContractFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-   const [clubs, setClubs] = useState<Club[]>([])
-    useEffect(() => {
-      let mounted = true
-      ;(async () => {
-        const dbClubs = await getClubs()
-        if (!mounted) return
-        setClubs(dbClubs ?? [])
-      })()
-      return () => {
-        mounted = false
-      }
-    }, [])
 
-  // Load players on mount
- const [players, setPlayers] = useState<Player[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
+
+  // Load players
   useEffect(() => {
     let mounted = true
     ;(async () => {
-      const dbplayers = await getPlayers()
-      if (!mounted) return
-      setPlayers(dbplayers ?? [])
+      const loaded = await getPlayers()
+      if (mounted) setPlayers(loaded)
     })()
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [])
+
+  // Load clubs
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const loaded = await getClubs()
+      if (mounted) setClubs(loaded)
+    })()
+    return () => { mounted = false }
+  }, [])
+
   const [formData, setFormData] = useState({
     playerId: contract?.playerId?.toString() || "",
     playerName: contract?.playerName || "",
@@ -70,8 +69,8 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
   })
 
   const handlePlayerChange = (playerId: string) => {
-    const player = players.find((p) => p.id === Number(playerId))
-    setFormData((prev) => ({
+    const player = players.find(p => p.id === Number(playerId))
+    setFormData(prev => ({
       ...prev,
       playerId,
       playerName: player?.name || "",
@@ -79,8 +78,8 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
   }
 
   const handleClubChange = (clubId: string) => {
-    const club = clubs.find((c) => c.id === Number(clubId))
-    setFormData((prev) => ({
+    const club = clubs.find(c => c.id === Number(clubId))
+    setFormData(prev => ({
       ...prev,
       clubId,
       clubName: club?.name || "",
@@ -90,7 +89,6 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
-
     setIsSubmitting(true)
 
     const contractData = {
@@ -106,8 +104,20 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
 
     try {
       if (mode === "add") {
+        // First: create the contract
         await addContractAction(contractData)
-      } else if (contract) {
+
+        // Then: if status is Active → increment club counters
+        if (contractData.status === "Active" && contractData.clubId) {
+          const club = clubs.find(c => c.id === contractData.clubId)
+          if (club) {
+            await updateClubAction(club.id, {
+              playersManaged: club.playersManaged + 1,
+              activeContracts: club.activeContracts + 1,
+            })
+          }
+        }
+      } else if (mode === "edit" && contract) {
         await updateContractAction(contract.id, contractData)
       }
 
@@ -115,7 +125,6 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
       router.refresh()
     } catch (error) {
       console.error("Failed to save contract:", error)
-      // You could add a toast notification here
       alert("Failed to save contract. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -134,16 +143,10 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Player</Label>
-              <Select
-                value={formData.playerId}
-                onValueChange={handlePlayerChange}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a player" />
-                </SelectTrigger>
+              <Select value={formData.playerId} onValueChange={handlePlayerChange} required>
+                <SelectTrigger><SelectValue placeholder="Select a player" /></SelectTrigger>
                 <SelectContent>
-                  {players.map((player) => (
+                  {players.map(player => (
                     <SelectItem key={player.id} value={player.id.toString()}>
                       {player.name}
                     </SelectItem>
@@ -154,16 +157,10 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
 
             <div className="space-y-2">
               <Label>Club</Label>
-              <Select
-                value={formData.clubId}
-                onValueChange={handleClubChange}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a club" />
-                </SelectTrigger>
+              <Select value={formData.clubId} onValueChange={handleClubChange} required>
+                <SelectTrigger><SelectValue placeholder="Select a club" /></SelectTrigger>
                 <SelectContent>
-                  {clubs.map((club) => (
+                  {clubs.map(club => (
                     <SelectItem key={club.id} value={club.id.toString()}>
                       {club.name}
                     </SelectItem>
@@ -177,9 +174,7 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
               <Input
                 type="date"
                 value={formData.startDate}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, startDate: e.target.value }))
-                }
+                onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                 required
               />
             </div>
@@ -189,9 +184,7 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
               <Input
                 type="date"
                 value={formData.endDate}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, endDate: e.target.value }))
-                }
+                onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                 required
               />
             </div>
@@ -201,9 +194,7 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
               <Input
                 placeholder="e.g. €15M"
                 value={formData.fee}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, fee: e.target.value }))
-                }
+                onChange={e => setFormData(prev => ({ ...prev, fee: e.target.value }))}
                 required
               />
             </div>
@@ -212,21 +203,12 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
               <Label>Status</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    status: value as Contract["status"],
-                  }))
-                }
+                onValueChange={value => setFormData(prev => ({ ...prev, status: value as Contract["status"] }))}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {statuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
+                  {statuses.map(status => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -235,18 +217,9 @@ export function ContractForm({ contract, mode }: ContractFormProps) {
 
           <div className="flex gap-4 pt-6">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Saving..."
-                : mode === "add"
-                  ? "Create Contract"
-                  : "Save Changes"}
+              {isSubmitting ? "Saving..." : mode === "add" ? "Create Contract" : "Save Changes"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
           </div>
