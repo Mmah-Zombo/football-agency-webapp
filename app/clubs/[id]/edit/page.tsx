@@ -1,4 +1,3 @@
-import { use } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { PageHeader } from "@/components/page-header"
 import { ClubForm } from "@/components/club-form"
