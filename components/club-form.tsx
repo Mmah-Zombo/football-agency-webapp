@@ -75,6 +75,16 @@ export function ClubForm({ club, mode }: ClubFormProps) {
     }
   }
 
+  const leagues = [
+    "Premier League",
+    "La Liga",
+    "Bundesliga",
+    "Serie A",
+    "Ligue 1",
+    "Scottish Premiership",
+    "Eredivisie",
+    "Primeira Liga",
+  ]
   return (
     <Card className="max-w-2xl">
       <CardHeader>
@@ -101,11 +111,19 @@ export function ClubForm({ club, mode }: ClubFormProps) {
             </div>
             <div className="space-y-2">
               <Label>League</Label>
-              <Input
+              <Input 
+                id="league"
                 value={formData.league}
                 onChange={e => setFormData(prev => ({ ...prev, league: e.target.value }))}
+                placeholder="Enter league name"
+                list="leagues"
                 required
               />
+              <datalist id="leagues">
+                {leagues.map((league) => (
+                  <option key={league} value={league} />
+                ))}
+              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
